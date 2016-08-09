@@ -38,7 +38,8 @@ class Message(object):
         return ''.join(self.payload)
 
     def setPayload(self, payload):
-        if len(payload) > 9:
+        #Extended messages may be up to 14 bytes
+        if len(payload) > 15:
             raise MessageError(
                   'Could not set payload (payload too long).')
 
@@ -87,8 +88,9 @@ class Message(object):
 
         if sync != MESSAGE_TX_SYNC:
             raise MessageError('Could not decode (expected TX sync).')
-        if length > 9:
-            raise MessageError('Could not decode (payload too long).')
+        #Extended messages may be up to 14 bytes
+        if length > 15:
+             raise MessageError('Could not decode (payload too long).')
         if len(raw) < (length + 4):
             raise MessageError('Could not decode (message is incomplete).')
 
@@ -104,6 +106,8 @@ class Message(object):
     def getHandler(self, raw=None):
         if raw:
             self.decode(raw)
+        else:
+            raise MessageError('Couldnt decode raw')
 
         msg = None
         if self.type_ == MESSAGE_CHANNEL_UNASSIGN:
@@ -120,6 +124,8 @@ class Message(object):
             msg = ChannelFrequencyMessage()
         elif self.type_ == MESSAGE_CHANNEL_TX_POWER:
             msg = ChannelTXPowerMessage()
+        elif self.type_ == MESSAGE_ENABLE_EXTENDED:
+            msg = EnableExtendedMessage()
         elif self.type_ == MESSAGE_NETWORK_KEY:
             msg = NetworkKeyMessage()
         elif self.type_ == MESSAGE_TX_POWER:
@@ -150,7 +156,7 @@ class Message(object):
             msg = SerialNumberMessage()
         else:
             raise MessageError('Could not find message handler ' \
-                               '(unknown message type).')
+                               '(unknown message type : %d).' % self.type_)
 
         msg.setPayload(self.getPayload())
         return msg
@@ -197,6 +203,26 @@ class ChannelAssignMessage(ChannelMessage):
     def setNetworkNumber(self, number):
         self.payload[2] = chr(number)
 
+class ChannelAssignExMessage(ChannelMessage):
+    def __init__(self, number=0x00, type_=0x00, network=0x00, ex_assignment=0x00):
+        payload = struct.pack('BBB', type_, network, ex_assignment)
+        ChannelMessage.__init__(self, type_=MESSAGE_CHANNEL_ASSIGN,
+                                payload=payload, number=number)
+
+    def getChannelType(self):
+        return ord(self.payload[1])
+
+    def setChannelType(self, type_):
+        self.payload[1] = chr(type_)
+
+    def getNetworkNumber(self):
+        return ord(self.payload[2])
+
+    def setNetworkNumber(self, number):
+        self.payload[2] = chr(number)
+
+    def setExtendedAssignment(self, assignment):
+        self.payload[3] = chr(assignment)
 
 class ChannelIDMessage(ChannelMessage):
     def __init__(self, number=0x00, device_number=0x0000, device_type=0x00,
@@ -276,6 +302,13 @@ class ChannelTXPowerMessage(ChannelMessage):
     def setPower(self, power):
         self.payload[1] = chr(power)
 
+class EnableExtendedMessage(ChannelMessage):
+    def __init__(self, number=0x00, enable=0x00):
+        ChannelMessage.__init__(self, type_=MESSAGE_ENABLE_EXTENDED,
+                                payload='\x00', number=number)
+
+    def setEnable(self, enable):
+        self.payload[1] = chr(enable)
 
 class NetworkKeyMessage(Message):
     def __init__(self, number=0x00, key='\x00' * 8):

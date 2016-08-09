@@ -48,7 +48,7 @@ def ProcessBuffer(buffer_):
             msg = hf.getHandler(buffer_)
             buffer_ = buffer_[len(msg.getPayload()) + 4:]
             messages.append(msg)
-        except MessageError, e:
+        except Exception, e:
             if e.internal == "CHECKSUM":
                 buffer_ = buffer_[ord(buffer_[1]) + 4:]
             else:
@@ -73,10 +73,12 @@ def EventPump(evm):
 
         buffer_ += evm.driver.read(20)
         if len(buffer_) == 0:
-            continue
+            continue		
+
         buffer_, messages = ProcessBuffer(buffer_)
 
         evm.callbacks_lock.acquire()
+
         for message in messages:
             for callback in evm.callbacks:
                 try:

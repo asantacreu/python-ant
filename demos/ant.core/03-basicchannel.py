@@ -31,7 +31,7 @@ channel = antnode.getFreeChannel()
 channel.name = 'C:HRM'
 
 # Initialize it as a receiving channel using our network key
-channel.assign('N:ANT+', CHANNEL_TYPE_TWOWAY_RECEIVE)
+channel.assign('N:ANT+', CHANNEL_TYPE_TWOWAY_RECEIVE,0x00)
 
 # Now set the channel id for pairing with an ANT+ HR monitor
 channel.setID(120, 0, 0)

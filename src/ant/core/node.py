@@ -57,10 +57,16 @@ class Channel(event.EventCallback):
     def __del__(self):
         self.node.evm.removeCallback(self)
 
-    def assign(self, net_key, ch_type):
-        msg = message.ChannelAssignMessage(number=self.number)
+    def assign(self, net_key, ch_type, ex_assign):
+        if ex_assign != 0x00:
+            msg = message.ChannelAssignExMessage(number=self.number)  
+            msg.setExtendedAssignment(ex_assign)
+        elif ex_assign == 0x00:
+            msg = message.ChannelAssignMessage(number=self.number)
+
         msg.setNetworkNumber(self.node.getNetworkKey(net_key).number)
         msg.setChannelType(ch_type)
+       
         self.node.driver.write(msg.encode())
         if self.node.evm.waitForAck(msg) != RESPONSE_NO_ERROR:
             raise ChannelError('Could not assign channel.')
@@ -74,6 +80,19 @@ class Channel(event.EventCallback):
         self.node.driver.write(msg.encode())
         if self.node.evm.waitForAck(msg) != RESPONSE_NO_ERROR:
             raise ChannelError('Could not set channel ID.')
+
+    def requestID(self):
+        msg = message.ChannelRequestMessage()
+        msg.setMessageID(MESSAGE_CHANNEL_ID)
+        self.node.driver.write(msg.encode())
+
+    def enableExtendedMessages(self, enable):
+        msg = message.EnableExtendedMessage()
+        msg.setEnable(enable)
+        self.node.driver.write(msg.encode())
+        if self.node.evm.waitForAck(msg) != RESPONSE_NO_ERROR:
+            raise ChannelError('Could not set enable extended messages.')
+
 
     def setSearchTimeout(self, timeout):
         msg = message.ChannelSearchTimeoutMessage(number=self.number)
