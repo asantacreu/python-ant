@@ -38,8 +38,8 @@ class Message(object):
         return ''.join(self.payload)
 
     def setPayload(self, payload):
-        #Extended messages may be up to 14 bytes
-        if len(payload) > 15:
+        #Extended messages may be up to 16 bytes
+        if len(payload) > 17:
             raise MessageError(
                   'Could not set payload (payload too long).')
 
@@ -63,7 +63,7 @@ class Message(object):
 
         checksum = MESSAGE_TX_SYNC
         for byte in data:
-            checksum = (checksum ^ ord(byte)) % 0xFF
+            checksum = (checksum ^ ord(byte))
 
         return checksum
 
@@ -310,9 +310,29 @@ class EnableExtendedMessage(ChannelMessage):
     def setEnable(self, enable):
         self.payload[1] = chr(enable)
 
+# 64 bits network key
 class NetworkKeyMessage(Message):
     def __init__(self, number=0x00, key='\x00' * 8):
         Message.__init__(self, type_=MESSAGE_NETWORK_KEY, payload='\x00' * 9)
+        self.setNumber(number)
+        self.setKey(key)
+
+    def getNumber(self):
+        return ord(self.payload[0])
+
+    def setNumber(self, number):
+        self.payload[0] = chr(number)
+
+    def getKey(self):
+        return self.getPayload()[1:]
+
+    def setKey(self, key):
+        self.payload[1:] = key
+
+# 128 bits network key
+class NetworkKeyMessage128(Message):
+    def __init__(self, number=0x00, key='\x00' * 16):
+        Message.__init__(self, type_=MESSAGE_NETWORK_KEY_128, payload='\x00' * 17)
         self.setNumber(number)
         self.setKey(key)
 

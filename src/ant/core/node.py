@@ -42,6 +42,14 @@ class NetworkKey(object):
             self.name = str(uuid.uuid4())
         self.number = 0
 
+class NetworkKey128(object):
+    def __init__(self, name=None, key='\x00' * 16):
+        self.key = key
+        if name:
+            self.name = name
+        else:
+            self.name = str(uuid.uuid4())
+        self.number = 0
 
 class Channel(event.EventCallback):
     cb_lock = thread.allocate_lock()
@@ -176,8 +184,9 @@ class Node(event.EventCallback):
         if not self.driver.isOpen():
             self.driver.open()
 
-        self.reset()
         self.evm.start()
+        self.reset()
+        
         self.running = True
         self.init()
 
@@ -208,8 +217,8 @@ class Node(event.EventCallback):
 
         self.networks = []
         for i in range(0, caps.getMaxNetworks()):
-            self.networks.append(NetworkKey())
-            self.setNetworkKey(i)
+            self.networks.append(NetworkKey128())
+            self.setNetworkKey128(i)
         self.channels = []
         for i in range(0, caps.getMaxChannels()):
             self.channels.append(Channel(self))
@@ -228,6 +237,17 @@ class Node(event.EventCallback):
             self.networks[number] = key
 
         msg = message.NetworkKeyMessage()
+        msg.setNumber(number)
+        msg.setKey(self.networks[number].key)
+        self.driver.write(msg.encode())
+        self.evm.waitForAck(msg)
+        self.networks[number].number = number
+
+    def setNetworkKey128(self, number, key=None):
+        if key:
+            self.networks[number] = key
+
+        msg = message.NetworkKeyMessage128()
         msg.setNumber(number)
         msg.setKey(self.networks[number].key)
         self.driver.write(msg.encode())

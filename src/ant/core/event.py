@@ -71,7 +71,7 @@ def EventPump(evm):
             go = False
         evm.running_lock.release()
 
-        buffer_ += evm.driver.read(20)
+        buffer_ += evm.driver.read(30)
         if len(buffer_) == 0:
             continue		
 
